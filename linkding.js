@@ -1,26 +1,23 @@
 Plugins.Linkding = {
 
-	shareArticleToLinkding: function(id, btn) {
+	shareArticleToLinkding: function (id) {
 		try {
-
-			var d = new Date();
-		    var ts = d.getTime();
-
-			Notify.progress("Saving to Linkding…", true);
+			Notify.progress("Adding to Linkding", true);
 			xhr.post("backend.php",
-			{
-				op: "pluginhandler",
-				plugin: "Linkding",
-				method: "getInfo",
-				id: encodeURIComponent(id)
-			},
-			(reply) => {
-				if (reply.status=="200" || reply.status=="201") {
-					Notify.info("Saved to Linkding:<br/><em>" + reply.title + "</em>");
-				} else {
-					Notify.error("<strong>Error saving to Linkding!</strong><br/>("+reply.status+") "+reply.error);
+				{
+					op: "PluginHandler",
+					plugin: "linkding",
+					method: "getInfo",
+					id: encodeURIComponent(id)
+				},
+				(reply) => {
+					var ti = JSON.parse(reply);
+					if (ti.status == 200 || ti.status == 201) {
+						Notify.info("Added to Linkding:<br/><em>" + ti.title + "</em>");
+					} else {
+						Notify.error("<strong>Error adding to Linkding:</strong><br/>" + ti.message || "unknown");
+					}
 				}
-			}
 			);
 		} catch (e) {
 			App.Error.report(e);
@@ -31,9 +28,9 @@ Plugins.Linkding = {
 require(['dojo/_base/kernel', 'dojo/ready'], function (dojo, ready) {
 	ready(function () {
 		PluginHost.register(PluginHost.HOOK_INIT_COMPLETE, () => {
-			App.hotkey_actions['linkding_save'] = function() {
+			App.hotkey_actions['linkding_save'] = function () {
 				if (Article.getActive()) {
-					var artid = "ld"+Article.getActive();
+					var artid = "ld" + Article.getActive();
 					Plugins.Linkding.shareArticleToLinkding(Article.getActive(), document.getElementById(artid));
 					return;
 				}

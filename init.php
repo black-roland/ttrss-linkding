@@ -41,7 +41,7 @@ class Linkding extends Plugin {
 	function hook_article_button($line) {
 		$article_id = $line["id"];
 
-		$rv = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" class=\"material-icons\" id=\"ld$article_id\" style=\"cursor : pointer\" onclick=\"Plugins.Linkding.shareArticleToLinkding($article_id, this)\" title='".__('Add to Linkding')."'><path fill=\"none\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-miterlimit=\"1.5\" stroke-width=\".977\" d=\"M7.785 3.457 3.371 7.871s-1.516 1.48.133 3.176c1.66 1.703 3.18.133 3.18.133l4.41-4.41\"/><path fill=\"none\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-miterlimit=\"1.5\" stroke-width=\".977\" d=\"m8.246 12.516 4.398-4.43s1.512-1.488-.144-3.176c-1.664-1.695-3.18-.12-3.18-.12L4.926 9.214\"/></svg>";
+		$rv = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" class=\"material-icons\" id=\"ld$article_id\" style=\"cursor : pointer\" onclick=\"Plugins.Linkding.shareArticleToLinkding($article_id, this)\" title='".__('Add to Linkding')."'><g fill=\"none\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-miterlimit=\"1.5\" stroke-width=\".977\"><path stroke-width=\"1.18939003\" d=\"M7.732 2.487 2.358 7.86s-1.845 1.802.162 3.867c2.021 2.073 3.872.161 3.872.161L11.76 6.52\"/><path stroke-width=\"1.18939003\" d=\"m8.293 13.515 5.354-5.393s1.841-1.812-.175-3.867c-2.026-2.063-3.871-.146-3.871-.146L4.25 9.495\"/></g></svg>";
 
 		return $rv;
 	}
@@ -55,19 +55,22 @@ class Linkding extends Plugin {
 				WHERE id = ? AND ref_id = id AND owner_uid = ?");
 		$sth->execute([$id, $_SESSION['uid']]);
 
-		if($sth->rowCount() != 0) {
+		if ($sth->rowCount() != 0) {
 			$row = $sth->fetch();
 
 			$article_link = $row['link'];
 			$title = strip_tags($row['title']);
 			$content = strip_tags($row['content']);
+		} else {
+			$status = 404;
+			$message = 'Requested article not found';
 		}
 
-		$linkding_url = $this->host->get($this, "linkding_url");
-		$linkding_api_token = $this->host->get($this, "linkding_api_token");
-
-		//Call Linkding API
+		// Call Linkding API
 		if (function_exists('curl_init')) {
+			$linkding_url = $this->host->get($this, "linkding_url");
+			$linkding_api_token = $this->host->get($this, "linkding_api_token");
+
 			// First check if URL is already bookmarked
 			$checkUrl = $linkding_url . '/api/bookmarks/check/?url=' . urlencode($article_link);
 
@@ -75,7 +78,7 @@ class Linkding extends Plugin {
 			curl_setopt($cURL, CURLOPT_URL, $checkUrl);
 			curl_setopt($cURL, CURLOPT_HTTPHEADER, array(
 				'Authorization: Token ' . $linkding_api_token,
-				'Content-Type: application/json'
+				'Content-Type: application/json',
 			));
 			curl_setopt($cURL, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($cURL, CURLOPT_TIMEOUT, 10);
@@ -89,7 +92,7 @@ class Linkding extends Plugin {
 
 			// If bookmark already exists, return success
 			if ($checkStatus == 200 && isset($checkData['bookmark']) && $checkData['bookmark'] !== null) {
-				$status = "200";
+				$status = 200;
 				$message = "Already bookmarked";
 			} else {
 				// Create new bookmark
@@ -117,17 +120,17 @@ class Linkding extends Plugin {
 				$message = ($status == 200 || $status == 201) ? "Bookmark created" : "Error: " . $status;
 			}
 		} else {
-			$status = '501';
+			$status = 501;
 			$message = 'For the plugin to work you need to <strong>enable PHP extension CURL</strong>!';
 		}
 
-		//Return information on article and status
+		// Return information on article and status
 		print json_encode(array(
 			"title" => $title,
 			"link" => $article_link,
 			"id" => $id,
 			"status" => $status,
-			"message" => $message
+			"message" => $message,
 		));
 	}
 
