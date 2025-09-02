@@ -1,5 +1,5 @@
 <?php
-class oneclickpocket extends Plugin {
+class Linkding extends Plugin {
 	private $host;
 
 	function init($host) {
@@ -15,19 +15,19 @@ class oneclickpocket extends Plugin {
 	}
 
 	function about() {
-		return array(0.35,
-				"Add articles to Pocket with a single click",
-				"fxneumann");
+		return array(0.1,
+				"Add articles to Linkding with a single click",
+				"Based on oneclickpocket by fxneumann");
 	}
+
 	function save() {
+		$linkding_url = clean($_POST["linkding_url"]);
+		$linkding_api_token = clean($_POST["linkding_api_token"]);
 
-		$pocket_consumer_key = clean($_POST["pocket_consumer_key"]);
-		$this->host->set($this, "pocket_consumer_key", $pocket_consumer_key);
+		$this->host->set($this, "linkding_url", $linkding_url);
+		$this->host->set($this, "linkding_api_token", $linkding_api_token);
 
-		$pocket_access_token = clean($_POST["pocket_access_token"]);
-		$this->host->set($this, "pocket_access_token", $pocket_access_token);
-
-		echo "Consumer Key set to<br/> <small>$pocket_consumer_key</small><br/>Access Token set to<br/> <small>$pocket_access_token</small>";
+		echo "Linkding URL set to<br/> <small>$linkding_url</small><br/>API Token set";
 	}
 
         function api_version() {
@@ -35,22 +35,18 @@ class oneclickpocket extends Plugin {
         }
 
 	function get_js() {
-		return file_get_contents(dirname(__FILE__) . "/pocket.js");
+		return file_get_contents(dirname(__FILE__) . "/linkding.js");
 	}
 
 	function hook_article_button($line) {
 		$article_id = $line["id"];
 
-		$rv = "<img src=\"plugins/oneclickpocket/pocketgrey.png\"
-			class=\"tagsPic\" id=\"ocp$article_id\" style=\"cursor : pointer\"
-			onclick=\"Plugins.oneclickpocket.shareArticleToPocket($article_id, this)\"
-			title='".__('Save to Pocket')."'>";
+		$rv = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" class=\"material-icons\" id=\"ld$article_id\" style=\"cursor : pointer\" onclick=\"Plugins.Linkding.shareArticleToLinkding($article_id, this)\" title='".__('Add to Linkding')."'><path fill=\"none\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-miterlimit=\"1.5\" stroke-width=\".977\" d=\"M7.785 3.457 3.371 7.871s-1.516 1.48.133 3.176c1.66 1.703 3.18.133 3.18.133l4.41-4.41\"/><path fill=\"none\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-miterlimit=\"1.5\" stroke-width=\".977\" d=\"m8.246 12.516 4.398-4.43s1.512-1.488-.144-3.176c-1.664-1.695-3.18-.12-3.18-.12L4.926 9.214\"/></svg>";
 
 		return $rv;
 	}
 
 	function getInfo() {
-
 		//retrieve Data from the DB
 		$id = $_REQUEST['id'];
 
@@ -60,61 +56,89 @@ class oneclickpocket extends Plugin {
 		$sth->execute([$id, $_SESSION['uid']]);
 
 		if($sth->rowCount() != 0) {
-
 			$row = $sth->fetch();
 
 			$title = truncate_string(strip_tags($row['title']), 100, '...');
 			$article_link = $row['link'];
 		}
 
-		$consumer_key = $this->host->get($this, "pocket_consumer_key");
-		$pocket_access_token = $this->host->get($this, "pocket_access_token");
+		$linkding_url = $this->host->get($this, "linkding_url");
+		$linkding_api_token = $this->host->get($this, "linkding_api_token");
 
-
-		//Call Pocket API
-
+		//Call Linkding API
 		if (function_exists('curl_init')) {
- 		 $postfields = array(
-		 	'consumer_key' => $consumer_key,
-		 	'access_token' => $pocket_access_token,
-			'url'          => $article_link,
-			'title'        => $title
-			);
-		 $cURL = curl_init();
-		 curl_setopt($cURL, CURLOPT_URL, 'https://getpocket.com/v3/add');
-		 curl_setopt($cURL, CURLOPT_HEADER, 1);
-		 curl_setopt($cURL, CURLOPT_HTTPHEADER, array('Content-type: application/x-www-form-urlencoded;charset=UTF-8'));
-		 curl_setopt($cURL, CURLOPT_RETURNTRANSFER, true);
-		 curl_setopt($cURL, CURLOPT_TIMEOUT, 5);
-		 curl_setopt($cURL, CURLOPT_POST, 4);
-		 curl_setopt($cURL, CURLOPT_POSTFIELDS, http_build_query($postfields));
-		 $apicall = curl_exec($cURL);
-		 curl_close($cURL);
+			// First check if URL is already bookmarked
+			$checkUrl = $linkding_url . '/api/bookmarks/check/?url=' . urlencode($article_link);
 
-		 //Store error code in $status
-		 $status = preg_match('/^X-Error: .*$/m', $apicall, $matches) ? $matches[0] : 1;
+			$cURL = curl_init();
+			curl_setopt($cURL, CURLOPT_URL, $checkUrl);
+			curl_setopt($cURL, CURLOPT_HTTPHEADER, array(
+				'Authorization: Token ' . $linkding_api_token,
+				'Content-Type: application/json'
+			));
+			curl_setopt($cURL, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($cURL, CURLOPT_TIMEOUT, 10);
+			curl_setopt($cURL, CURLOPT_SSL_VERIFYPEER, false);
+
+			$checkResult = curl_exec($cURL);
+			$checkStatus = curl_getinfo($cURL, CURLINFO_HTTP_CODE);
+			curl_close($cURL);
+
+			$checkData = json_decode($checkResult, true);
+
+			// If bookmark already exists, return success
+			if ($checkStatus == 200 && isset($checkData['bookmark']) && $checkData['bookmark'] !== null) {
+				$status = "200";
+				$message = "Already bookmarked";
+			} else {
+				// Create new bookmark
+				$postfields = array(
+					'url' => $article_link,
+					'title' => $title
+				);
+
+				$cURL = curl_init();
+				curl_setopt($cURL, CURLOPT_URL, $linkding_url . '/api/bookmarks/');
+				curl_setopt($cURL, CURLOPT_HTTPHEADER, array(
+					'Authorization: Token ' . $linkding_api_token,
+					'Content-Type: application/json'
+				));
+				curl_setopt($cURL, CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($cURL, CURLOPT_TIMEOUT, 10);
+				curl_setopt($cURL, CURLOPT_POST, true);
+				curl_setopt($cURL, CURLOPT_POSTFIELDS, json_encode($postfields));
+
+				$apicall = curl_exec($cURL);
+				$status = curl_getinfo($cURL, CURLINFO_HTTP_CODE);
+				curl_close($cURL);
+
+				$message = ($status == 200 || $status == 201) ? "Bookmark created" : "Error: " . $status;
+			}
 		} else {
-		 $status = 'For the plugin to work you need to <strong>enable PHP extension CURL</strong>!';
+			$status = '501';
+			$message = 'For the plugin to work you need to <strong>enable PHP extension CURL</strong>!';
 		}
+
 		//Return information on article and status
 		print json_encode(array(
 			"title" => $title,
 			"link" => $article_link,
 			"id" => $id,
-			"status" => $status
-			));
+			"status" => $status,
+			"message" => $message
+		));
 	}
 
 	function hook_prefs_tab($args) {
 	    //Add preferences pane
 		if ($args != "prefPrefs") return;
 
-		print "<div dojoType=\"dijit.layout.AccordionPane\" title=\"".__("Pocket")."\">";
+		print "<div dojoType=\"dijit.layout.AccordionPane\" title=\"".__("Linkding")."\">";
 
 		print "<br/>";
 
-        $pocket_consumer_key = $this->host->get($this, "pocket_consumer_key");
-		$pocket_access_token = $this->host->get($this, "pocket_access_token");
+        $linkding_url = $this->host->get($this, "linkding_url");
+		$linkding_api_token = $this->host->get($this, "linkding_api_token");
 
 		print "<form dojoType=\"dijit.form.Form\">";
 
@@ -130,19 +154,19 @@ class oneclickpocket extends Plugin {
 
 print "<input dojoType=\"dijit.form.TextBox\" style=\"display : none\" name=\"op\" value=\"pluginhandler\">";
 print "<input dojoType=\"dijit.form.TextBox\" style=\"display : none\" name=\"method\" value=\"save\">";
-print "<input dojoType=\"dijit.form.TextBox\" style=\"display : none\" name=\"plugin\" value=\"oneclickpocket\">";
+print "<input dojoType=\"dijit.form.TextBox\" style=\"display : none\" name=\"plugin\" value=\"Linkding\">";
 print "<table width=\"100%\" class=\"prefPrefsList\">";
 
 if (!function_exists('curl_init')) {
  print '<tr><td colspan="3" style="color:red;font-size:large">For the plugin to work you need to <strong>enable PHP extension CURL</strong>!</td></tr>';
 }
 
-    print "<tr><td width=\"20%\">".__("Pocket Consumer Key")."</td>";
-	print '<td width=\"20%\">Get a <a href="http://getpocket.com/developer/apps/new">Pocket Consumer Key</a></td>';
-	print "<td class=\"prefValue\"><input dojoType=\"dijit.form.ValidationTextBox\" required=\"1\" name=\"pocket_consumer_key\" value=\"$pocket_consumer_key\"></td>";
-	print "<tr><td width=\"20%\">".__("Pocket Access Token")."</td>";
-	print "<td width=\"20%\"><a href=\"plugins/oneclickpocket/auth.php?consumer_key=$pocket_consumer_key\">Generate Access Token</a></td>";
-	print "<td class=\"prefValue\"><input dojoType=\"dijit.form.ValidationTextBox\" required=\"1\" name=\"pocket_access_token\" value=\"$pocket_access_token\"></td></tr>";
+	print "<tr><td width=\"20%\">".__("Linkding URL")."</td>";
+	print '<td width=\"20%\">Enter your Linkding instance URL (e.g., https://linkding.example.com):</td>';
+	print "<td class=\"prefValue\"><input dojoType=\"dijit.form.ValidationTextBox\" required=\"1\" name=\"linkding_url\" regExp='^(http|https)://.*' value=\"$linkding_url\"></td>";
+	print "<tr><td width=\"20%\">".__("Linkding REST API Token")."</td>";
+	print "<td width=\"20%\">Find your API token in Linkding under <strong>Settings → Integrations</strong>.</td>";
+	print "<td class=\"prefValue\"><input dojoType=\"dijit.form.ValidationTextBox\" required=\"1\" name=\"linkding_api_token\" value=\"$linkding_api_token\"></td></tr>";
 	print "</table>";
 	print "<p><button dojoType=\"dijit.form.Button\" type=\"submit\">".__("Save")."</button>";
 
@@ -153,25 +177,20 @@ if (!function_exists('curl_init')) {
 	}
 
 	function hook_hotkey_map($hotkeys) {
-        // Use the new target "pock_it" to define your own
-        // hotkey to this function in other plugins.
-        $hotkeys['i'] = 'pock_it';
-
+        $hotkeys['l'] = 'linkding_save';
         return $hotkeys;
     }
 
 	function hook_hotkey_info($hotkeys) {
-
         $offset = 1 + array_search('open_in_new_window', array_keys($hotkeys[__('Article')]));
         $hotkeys[__('Article')] =
             array_slice($hotkeys[__('Article')], 0, $offset, true) +
-            array('pock_it' => __('Save to Pocket')) +
+            array('linkding_save' => __('Add to Linkding')) +
             array_slice($hotkeys[__('Article')], $offset, NULL, true);
 
         return $hotkeys;
     }
 
 }
-
 
 ?>

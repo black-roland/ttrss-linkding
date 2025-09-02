@@ -1,32 +1,63 @@
-oneclickpocket
-==============
+# Tiny Tiny RSS Linkding Plugin
 
-Plugin for Tiny Tiny RSS. Add articles to Pocket with a single click or press of a button. Tested with TT-RSS 1.7.9 and TT-RSS 1.8.
+## Description
 
+This is an open source plugin for Tiny Tiny RSS which allows you to save articles to Linkding with a single click or hotkey.
 
-Requirements
-------------
-Requirements that exceed TT RSS' requirements: PHP CURL extension has to be enabled
+## Table of Contents
 
-Installation
-------------
-* Copy the *oneclickpocket* folder to your tt-rss *plugins/* folder.
-* Go to your tt-rss Preference page
-* Under *Plugins* section enable oneclickpocket plugin
-* A new pref pane will show up, named *Pocket* where you have to enter Pocket credentials (this is *not* your Pocket username and password!):
-+ *Pocket Consumer Key* -- to generate a Consumer Key, head to http://getpocket.com/developer/apps/new -- you only need the permission to Add
-+ *Pocket Access Token* -- to generate an Access Token, click "Generate Access Token" or open [plugins]/oneclickpocket/auth.php.
+* [Features](#features)
+* [Installation](#installation)
+* [Configuration](#configuration)
+* [Usage](#usage)
+* [Credits](#credits)
 
-Version history
----------------
-* 0.1 Initial Version
-* 0.2 Icon changes colour when clicked
-* 0.3 Added a hotkey (thanks to Bas1c), since 0.31 change icon colour for hotkey, too.
-* 0.32 Check for CURL and throw error if missing.
-* 0.33 Updated for PDO
-* 0.34 Update .js for TT-RSS 18.12+
-* 0.35 Update .js for TT-RSS 21.03+
+## Features
 
-Credits
--------
-I used Acaranta's (https://github.com/acaranta) Yourls-plugin as template.
+* Save articles to Linkding with a single click
+* Hotkey support (press 'l' to save current article)
+* Checks if article is already bookmarked before creating a new bookmark
+* Simple token-based authentication
+
+## Installation
+
+Clone this repository to your `plugins.local` folder of your Tiny Tiny RSS installation.
+
+```
+$ cd tt-rss/plugins.local
+$ git clone https://github.com/black-roland/ttrss-linkding linkding
+```
+
+Alternatively, you can download the ZIP file and extract it to your `plugins.local` folder, ensuring the folder is named `linkding`.
+
+Enable the `linkding` plugin in the Tiny Tiny RSS Preferences and reload.
+
+## Configuration
+
+After enabling the plugin, a Linkding configuration pane will appear in your Tiny Tiny RSS preferences. You need to configure the following settings:
+
+1.  **Linkding URL**
+    Enter your Linkding instance URL (e.g., `https://linkding.example.com`).
+
+2.  **Linkding REST API Token**
+    Find your API token in Linkding under **Settings → Integrations**.
+
+### To obtain your Linkding API token:
+
+1.  Log into your Linkding instance.
+2.  Go to **Settings → Integrations**.
+3.  Find the "REST API" section.
+4.  Copy the API token shown there.
+5.  Paste it into the "Linkding REST API Token" field in the Tiny Tiny RSS plugin settings.
+
+## Usage
+
+After configuring the plugin, you'll see a Linkding icon next to each article. Click the icon to save the article to Linkding.
+
+You can also use the hotkey 'l' to save the currently selected article to Linkding.
+
+The plugin will automatically check if an article is already bookmarked in Linkding to prevent duplicates.
+
+## Credits
+
+Based on [oneclickpocket](https://github.com/fxneumann/oneclickpocket) plugin by fxneumann.
