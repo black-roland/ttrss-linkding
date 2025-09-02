@@ -60,7 +60,7 @@ class Linkding extends Plugin {
 
 			$article_link = $row['link'];
 			$title = strip_tags($row['title']);
-			$content = strip_tags($row['content']);
+			$content = truncate_string($this->_html_to_plain_text($row['content']), 1000, '…');
 		} else {
 			$status = 404;
 			$message = 'Requested article not found';
@@ -202,6 +202,34 @@ class Linkding extends Plugin {
 				array_slice($hotkeys[__('Article')], $offset, NULL, true);
 
 		return $hotkeys;
+	}
+
+	/**
+	 * Convert HTML to plain text while preserving paragraph and line break structure
+	 *
+	 * @param string $html The input HTML text
+	 * @return string The converted plain text
+	 */
+	function _html_to_plain_text($html) {
+		// Replace paragraph tags with line breaks
+		$html = preg_replace('/<\/p>\s*<p>/', "\n\n", $html);
+		$html = preg_replace('/<p>/', '', $html);
+		$html = preg_replace('/<\/p>/', "\n\n", $html);
+
+		// Replace br tags with line breaks
+		$html = preg_replace('/<br\s*\/?>/', "\n", $html);
+
+		// Strip remaining HTML tags
+		$text = strip_tags($html);
+
+		// Decode HTML entities
+		$text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+		// Clean up excessive whitespace
+		$text = preg_replace('/\n\s*\n\s*\n/', "\n\n", $text);
+		$text = trim($text);
+
+		return $text;
 	}
 
 }
