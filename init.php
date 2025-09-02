@@ -17,7 +17,7 @@ class Linkding extends Plugin {
 	function about() {
 		return array(0.1,
 				"Add articles to Linkding with a single click",
-				"Based on oneclickpocket by fxneumann");
+				"@black-roland, based on oneclickpocket by @fxneumann");
 	}
 
 	function save() {
@@ -30,9 +30,9 @@ class Linkding extends Plugin {
 		echo "Linkding URL set to<br/> <small>$linkding_url</small><br/>API Token set";
 	}
 
-        function api_version() {
-                return 2;
-        }
+	function api_version() {
+		return 2;
+	}
 
 	function get_js() {
 		return file_get_contents(dirname(__FILE__) . "/linkding.js");
@@ -50,7 +50,7 @@ class Linkding extends Plugin {
 		//retrieve Data from the DB
 		$id = $_REQUEST['id'];
 
-		$sth = $this->pdo->prepare("SELECT title, link
+		$sth = $this->pdo->prepare("SELECT title, link, content
 				FROM ttrss_entries, ttrss_user_entries
 				WHERE id = ? AND ref_id = id AND owner_uid = ?");
 		$sth->execute([$id, $_SESSION['uid']]);
@@ -58,8 +58,9 @@ class Linkding extends Plugin {
 		if($sth->rowCount() != 0) {
 			$row = $sth->fetch();
 
-			$title = truncate_string(strip_tags($row['title']), 100, '...');
 			$article_link = $row['link'];
+			$title = strip_tags($row['title']);
+			$content = strip_tags($row['content']);
 		}
 
 		$linkding_url = $this->host->get($this, "linkding_url");
@@ -94,14 +95,15 @@ class Linkding extends Plugin {
 				// Create new bookmark
 				$postfields = array(
 					'url' => $article_link,
-					'title' => $title
+					'title' => $title,
+					'description' => $content,
 				);
 
 				$cURL = curl_init();
 				curl_setopt($cURL, CURLOPT_URL, $linkding_url . '/api/bookmarks/');
 				curl_setopt($cURL, CURLOPT_HTTPHEADER, array(
 					'Authorization: Token ' . $linkding_api_token,
-					'Content-Type: application/json'
+					'Content-Type: application/json',
 				));
 				curl_setopt($cURL, CURLOPT_RETURNTRANSFER, true);
 				curl_setopt($cURL, CURLOPT_TIMEOUT, 10);
@@ -130,7 +132,7 @@ class Linkding extends Plugin {
 	}
 
 	function hook_prefs_tab($args) {
-	    //Add preferences pane
+		//Add preferences pane
 		if ($args != "prefPrefs") return;
 
 		print "<div dojoType=\"dijit.layout.AccordionPane\" title=\"".__("Linkding")."\">";
@@ -177,19 +179,19 @@ if (!function_exists('curl_init')) {
 	}
 
 	function hook_hotkey_map($hotkeys) {
-        $hotkeys['l'] = 'linkding_save';
-        return $hotkeys;
-    }
+		$hotkeys['l'] = 'linkding_save';
+		return $hotkeys;
+	}
 
 	function hook_hotkey_info($hotkeys) {
-        $offset = 1 + array_search('open_in_new_window', array_keys($hotkeys[__('Article')]));
-        $hotkeys[__('Article')] =
-            array_slice($hotkeys[__('Article')], 0, $offset, true) +
-            array('linkding_save' => __('Add to Linkding')) +
-            array_slice($hotkeys[__('Article')], $offset, NULL, true);
+		$offset = 1 + array_search('open_in_new_window', array_keys($hotkeys[__('Article')]));
+		$hotkeys[__('Article')] =
+				array_slice($hotkeys[__('Article')], 0, $offset, true) +
+				array('linkding_save' => __('Add to Linkding')) +
+				array_slice($hotkeys[__('Article')], $offset, NULL, true);
 
-        return $hotkeys;
-    }
+		return $hotkeys;
+	}
 
 }
 
