@@ -27,7 +27,7 @@ class Linkding extends Plugin {
 		$this->host->set($this, "linkding_url", $linkding_url);
 		$this->host->set($this, "linkding_api_token", $linkding_api_token);
 
-		echo "Linkding URL set to<br/> <small>$linkding_url</small><br/>API Token set";
+		echo "Linkding URL set to: <em>$linkding_url</em><br />REST API Token set";
 	}
 
 	function api_version() {
@@ -139,7 +139,18 @@ class Linkding extends Plugin {
 
 		print "<br/>";
 
-        $linkding_url = $this->host->get($this, "linkding_url");
+		print "<h2>Linkding API Token Setup</h2>";
+		print "<p>To use this plugin, you need to obtain an API token from your Linkding instance:</p>";
+		print "<ol>";
+		print "<li>Log into your Linkding instance.</li>";
+		print "<li>Go to <strong>Settings → Integrations</strong>.</li>";
+		print "<li>Find the \"REST API\" section.</li>";
+		print "<li>Copy the API token shown there.</li>";
+		print "<li>Paste it into the \"Linkding REST API Token\" field below.</li>";
+		print "</ol>";
+		print "<p>You also need to provide the URL of your Linkding instance in the \"Linkding URL\" field below.</p>";
+
+		$linkding_url = $this->host->get($this, "linkding_url");
 		$linkding_api_token = $this->host->get($this, "linkding_api_token");
 
 		print "<form dojoType=\"dijit.form.Form\">";
@@ -148,34 +159,31 @@ class Linkding extends Plugin {
 			evt.preventDefault();
 			if (this.validate()) {
 				console.log(dojo.objectToQuery(this.getValues()));
-				xhrPost('backend.php',
+				xhr.post('backend.php',
 					this.getValues(),
-					(transport) => { Notify.info(transport.responseText); });
+					(reply) => { Notify.info(reply); });
 			}
 		</script>";
 
-print "<input dojoType=\"dijit.form.TextBox\" style=\"display : none\" name=\"op\" value=\"pluginhandler\">";
-print "<input dojoType=\"dijit.form.TextBox\" style=\"display : none\" name=\"method\" value=\"save\">";
-print "<input dojoType=\"dijit.form.TextBox\" style=\"display : none\" name=\"plugin\" value=\"Linkding\">";
-print "<table width=\"100%\" class=\"prefPrefsList\">";
+		print \Controls\pluginhandler_tags($this, "save");
+		print "<table width=\"100%\" class=\"prefPrefsList\">";
 
-if (!function_exists('curl_init')) {
- print '<tr><td colspan="3" style="color:red;font-size:large">For the plugin to work you need to <strong>enable PHP extension CURL</strong>!</td></tr>';
-}
+		if (!function_exists('curl_init')) {
+				print '<tr><td colspan="3" style="color:red;font-size:large">For the plugin to work you need to <strong>enable PHP extension CURL</strong>!</td></tr>';
+		}
 
-	print "<tr><td width=\"20%\">".__("Linkding URL")."</td>";
-	print '<td width=\"20%\">Enter your Linkding instance URL (e.g., https://linkding.example.com):</td>';
-	print "<td class=\"prefValue\"><input dojoType=\"dijit.form.ValidationTextBox\" required=\"1\" name=\"linkding_url\" regExp='^(http|https)://.*' value=\"$linkding_url\"></td>";
-	print "<tr><td width=\"20%\">".__("Linkding REST API Token")."</td>";
-	print "<td width=\"20%\">Find your API token in Linkding under <strong>Settings → Integrations</strong>.</td>";
-	print "<td class=\"prefValue\"><input dojoType=\"dijit.form.ValidationTextBox\" required=\"1\" name=\"linkding_api_token\" value=\"$linkding_api_token\"></td></tr>";
-	print "</table>";
-	print "<p><button dojoType=\"dijit.form.Button\" type=\"submit\">".__("Save")."</button>";
+		print "<tr><td width=\"20%\">".__("Linkding URL")."</td>";
+		print '<td width=\"20%\">Enter your Linkding instance URL (e.g., https://linkding.example.com):</td>';
+		print "<td class=\"prefValue\"><input dojoType=\"dijit.form.ValidationTextBox\" required=\"1\" name=\"linkding_url\" regExp='^(http|https)://.*' value=\"$linkding_url\"></td>";
+		print "<tr><td width=\"20%\">".__("Linkding REST API Token")."</td>";
+		print "<td width=\"20%\">Find your API token in Linkding under <strong>Settings → Integrations</strong>.</td>";
+		print "<td class=\"prefValue\"><input dojoType=\"dijit.form.ValidationTextBox\" required=\"1\" name=\"linkding_api_token\" value=\"$linkding_api_token\"></td></tr>";
+		print "</table>";
+		print "<p><button dojoType=\"dijit.form.Button\" type=\"submit\">".__("Save")."</button>";
 
-	print "</form>";
+		print "</form>";
 
-	print "</div>"; #pane
-
+		print "</div>"; #pane
 	}
 
 	function hook_hotkey_map($hotkeys) {
