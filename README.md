@@ -60,4 +60,4 @@ The plugin will automatically check if an article is already bookmarked in Linkd
 
 ## Credits
 
-Based on [oneclickpocket](https://github.com/fxneumann/oneclickpocket) plugin by fxneumann.
+This plugin was originally inspired by the [oneclickpocket](https://github.com/fxneumann/oneclickpocket) plugin by fxneumann. The original code did not specify a license and has been extensively rewritten and refactored. If you are the original author and have any concerns, please contact me.
